@@ -1,5 +1,8 @@
 #! /bin/bash
 
+# Script for building parameter input for ks_spectrum code
+# to produce output in the style of nl_spectrum
+
 paramfile=$1
 
 if [ $# -lt 1 ]
@@ -11,8 +14,6 @@ fi
 source $paramfile
 
 vol3=$[${nx}*${ny}*${nz}]
-
-norm=`echo $vol3 | awk '{print 1./$1}'`
 
 reload_gauge_cmd="reload_serial ${inlat}"
 
@@ -64,9 +65,17 @@ number_of_pbp_masses 0
 
 # Description of base sources
 
-number_of_base_sources 1
+number_of_base_sources 3
 
 # base source 0
+
+even_wall
+subset full
+t0 ${t0}
+source_label E
+forget_source
+
+# base source 1
 
 evenandodd_wall
 subset full
@@ -74,30 +83,22 @@ t0 ${t0}
 source_label q
 forget_source
 
+# base source 2
+
+evenminusodd_wall
+subset full
+t0 ${t0}
+source_label o
+forget_source
+
 # Description of modified sources
 
-number_of_modified_sources 2
-
-# source 1
-
-source 0
-
-funnywall1
-op_label f1
-forget_source
-
-# source 2
-
-source 0
-
-funnywall2
-op_label f2
-forget_source
+number_of_modified_sources 0
 
 EOF
 
 ######################################################################
-# Definition of propagators for two sets
+# Definition of propagators
 
 cat  <<EOF
 
@@ -119,7 +120,7 @@ source 0
 number_of_propagators ${nmasses}
 EOF
 
-# Propagators for set 0
+# Propagators for even wall source
 
 for ((m=0; m<${nmasses}; m++)); do
 
@@ -155,7 +156,7 @@ source 1
 number_of_propagators ${nmasses}
 EOF
 
-# Propagators for set 1
+# Propagators for evenandodd_wall source
 
 for ((m=0; m<${nmasses}; m++)); do
 
@@ -175,22 +176,23 @@ EOF
 
 done
 
-cat  <<EOF
-
 # Parameters for set 2
+
+cat  <<EOF
 
 max_cg_iterations ${max_cg_iterations}
 max_cg_restarts 5
 check yes
 momentum_twist 0 0 0
 time_bc antiperiodic
+precision ${precision}
 
 source 2
 
 number_of_propagators ${nmasses}
 EOF
 
-# Propagators for set 2
+# Propagators for evenminusodd_wall source
 
 for ((m=0; m<${nmasses}; m++)); do
 
@@ -219,8 +221,6 @@ number_of_quarks $[3*${nmasses}]
 
 EOF
 
-# Quarks for even and odd wall source
-
 for ((m=0; m<${nmasses}; m++)); do
 
 cat  <<EOF
@@ -237,13 +237,11 @@ EOF
 
 done
 
-# Quarks with funnywall1 source
-
 for ((m=0; m<${nmasses}; m++)); do
 
 cat  <<EOF
 
-# mass ${m} WP
+# mass ${m}
 
 propagator $[${nmasses}+${m}]
 
@@ -254,8 +252,6 @@ forget_ksprop
 EOF
 
 done
-
-# Quarks with funnywall2 source
 
 for ((m=0; m<${nmasses}; m++)); do
 
@@ -279,63 +275,159 @@ done
 cat  <<EOF
 # Description of mesons
 
-number_of_mesons $[2*${nmasses}]
+number_of_mesons $[4*${nmasses}]
 
 EOF
+
+k=0
 
 for ((m=0; m<${nmasses}; m++)); do
 
-n1=$[${nmasses}+${m}]
-n2=$[2*${nmasses}+${m}]
-
 cat  <<EOF
 
-# Even and odd wall with funnywall1
-# pair 0 (mass ${m} )
+# pair ${k} mass ${m} even wall / even wall
 
-pair ${m} ${n1}
+pair ${m} ${m}
 spectrum_request meson
 
 save_corr_fnal ${corrfilet}
 r_offset 0 0 0 ${t0}
 
-number_of_correlators 6
+number_of_correlators 2
 
-# Normalization is 1/vol3
-correlator PION_5  p000  1 * ${norm} pion5  0 0 0 E E E
-correlator PION_i5 p000  1 * ${norm} pioni5 0 0 0 E E E
-correlator PION_i  p000  1 * ${norm} pioni  0 0 0 E E E
-correlator PION_s  p000  1 * ${norm} pions  0 0 0 E E E
-correlator RHO_i   p000  1 * ${norm} rhoi   0 0 0 E E E
-correlator RHO_s   p000  1 * ${norm} rhois  0 0 0 E E E
-
-# pair 1 mass ${m}
-
-pair ${m} ${n2}
-spectrum_request meson
-
-save_corr_fnal ${corrfilet}
-r_offset 0 0 0 ${t0}
-
-number_of_correlators 6
-
-# Normalization is 1/vol3
-correlator PION_05 p000  1 * ${norm} pion05 0 0 0 E E E
-correlator PION_ij p000  1 * ${norm} pionij 0 0 0 E E E
-correlator PION_i0 p000  1 * ${norm} pioni0 0 0 0 E E E
-correlator PION_0  p000  1 * ${norm} pion0  0 0 0 E E E
-correlator RHO_i0  p000  1 * ${norm} rhoi0  0 0 0 E E E
-correlator RHO_0   p000  1 * ${norm} rho0   0 0 0 E E E
+correlator PION_PS p000  1 / 16 pion5  0 0 0 E E E
+correlator PION_SC p000  1 / 16 pion05 0 0 0 E E E
 
 EOF
 
+k=$[${k}+1]
+
 done
+
+for ((m=0; m<${nmasses}; m++)); do
 
 cat  <<EOF
 
+# pair ${k} mass ${m} evenandodd wall / evenandodd wall
+
+pair $[${nmasses}+${m}] $[${nmasses}+${m}]
+spectrum_request meson
+
+save_corr_fnal ${corrfilet}
+r_offset 0 0 0 ${t0}
+
+number_of_correlators 1
+
+correlator PION_PS_a p000  1 / 16 pion5  0 0 0 E E E
+
+EOF
+
+k=$[${k}+1]
+
+done
+
+for ((m=0; m<${nmasses}; m++)); do
+
+cat  <<EOF
+
+# pair ${k} mass ${m} evenminusodd wall / evenminusodd wall
+
+pair $[2*${nmasses}+${m}] $[2*${nmasses}+${m}]
+spectrum_request meson
+
+save_corr_fnal ${corrfilet}
+r_offset 0 0 0 ${t0}
+
+number_of_correlators 1
+
+correlator PION_PS_b p000  1 / 16 pion5  0 0 0 E E E
+
+EOF
+
+k=$[${k}+1]
+
+done
+
+for ((m=0; m<${nmasses}; m++)); do
+
+cat  <<EOF
+
+# pair ${k} mass ${m} evenandodd wall / evenminusodd wall
+
+pair $[${nmasses}+${m}] $[2*${nmasses}+${m}]
+spectrum_request meson
+
+save_corr_fnal ${corrfilet}
+r_offset 0 0 0 ${t0}
+
+number_of_correlators 1
+
+correlator PION_SC p000  1 / 16 pion05  0 0 0 E E E
+
+EOF
+
+k=$[${k}+1]
+
+done
+
+
+######################################################################
+# Specification of baryons
+
+cat  <<EOF
 # Description of baryons
 
-number_of_baryons 0
+number_of_baryons $[2*${nmasses}]
 
 EOF
+
+k=0
+
+for ((m=0; m<${nmasses}; m++)); do
+
+cat  <<EOF
+
+# triplet ${k} mass ${m} even wall
+
+triplet ${m} ${m} ${m}
+spectrum_request baryon
+
+save_corr_fnal ${corrfilet}
+r_offset 0 0 0 ${t0}
+
+number_of_correlators 1
+
+correlator NUCLEON  1 / 64 nucleon
+
+EOF
+
+k=$[${k}+1]
+
 done
+
+for ((m=0; m<${nmasses}; m++)); do
+
+cat  <<EOF
+
+# triplet ${k} mass ${m} evenandodd wall
+
+triplet $[${nmasses}+${m}] $[${nmasses}+${m}] $[${nmasses}+${m}]
+spectrum_request baryon
+
+save_corr_fnal ${corrfilet}
+r_offset 0 0 0 ${t0}
+
+number_of_correlators 2
+
+correlator NUCLEON  1 / 64 nucleon
+correlator DELTA    1 / 64 delta
+
+EOF
+
+k=$[${k}+1]
+
+done
+
+reload_gauge_cmd="continue"
+
+done # sources

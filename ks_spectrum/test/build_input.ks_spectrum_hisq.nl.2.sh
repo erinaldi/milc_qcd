@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Script for building parameter input for ks_spectrum code
-# to produce output in the style of nl_spectrum 
+# to produce output in the style of nl_spectrum
 
 paramfile=$1
 
@@ -43,7 +43,7 @@ for ((i=0; i<${n_sources}; i++)); do
 t0=$[${source_start}+${i}*${source_inc}]
 corrfilet=${corrfile}_t${t0}.test-out
 
-cat  <<EOF 
+cat  <<EOF
 
 ######################################################################
 # source time ${t0}
@@ -57,7 +57,7 @@ coulomb_gauge_fix
 forget
 staple_weight 0
 ape_iter 0
-coordinate_origin 0 0 0 0
+coordinate_origin ${sx} ${sy} ${sz} ${st}
 
 # Chiral condensate and related measurements
 
@@ -296,7 +296,7 @@ r_offset 0 0 0 ${t0}
 number_of_correlators 2
 
 correlator PION_PS p000  1 / 16 pion5  0 0 0 E E E
-correlator PION_SC p000  1 / 16 pion05 0 0 0 E E E           
+correlator PION_SC p000  1 / 16 pion05 0 0 0 E E E
 
 EOF
 
